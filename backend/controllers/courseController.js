@@ -6,10 +6,10 @@ import Course from '../models/courseModel.js'
 // @access  Private
 
 const createCourse = asyncHandler(async (req, res) => {
-	
+
   const { course_name,
-  		  course_outline,
-  		  total_units } = req.body
+    course_outline,
+    total_units } = req.body
 
   const course = new Course({
     course_name: course_name,
@@ -19,32 +19,32 @@ const createCourse = asyncHandler(async (req, res) => {
   })
 
   try {
-  	const createdCourse = await course.save()
-  	res.status(201).json(createdCourse)
+    const createdCourse = await course.save()
+    res.status(201).json(createdCourse)
   }
   catch (error) {
-  	res.status(400)
-	throw new Error('Unable to create course')
+    res.status(400)
+    throw new Error('Unable to create course')
   }
 })
 
 //@desc Fetch all courses
 //@route GET /api/course/all
 //@access Public
-const getCourses = asyncHandler(async(req,res) => {
-	const courses = await Course.find({})
+const getCourses = asyncHandler(async (req, res) => {
+  const courses = await Course.find({});
 
-	res.json(courses);
+  res.json(courses);
 })
 
 //@desc Fetch specific courses
 //@route GET /api/course/specific
 //@access Private
-const getSpecificCourses = asyncHandler(async(req,res) => {
+const getSpecificCourses = asyncHandler(async (req, res) => {
   const courses = await Course.find({})
 
   const courseData = courses.filter(course => {
-    if(course.created_by.equals(req.user._id)) {
+    if (course.created_by.equals(req.user._id)) {
       return course
     }
   })
@@ -58,14 +58,14 @@ const getSpecificCourses = asyncHandler(async(req,res) => {
 // @access  Private
 
 const updateCourse = asyncHandler(async (req, res) => {
-  
+
   const { course_name,
-        course_outline,
-        total_units } = req.body
+    course_outline,
+    total_units } = req.body
 
   const course = await Course.findById(req.params.id)
 
-  if(course) {
+  if (course) {
     course.course_name = course_name
     course.course_outline = course_outline
     course.total_units = total_units
@@ -84,16 +84,16 @@ const updateCourse = asyncHandler(async (req, res) => {
 // @access  Private
 
 const deleteCourse = asyncHandler(async (req, res) => {
-  
+
   const id = req.params.id
 
-  Course.findOneAndRemove({_id: id}, function(err) {
-    if(err) {
+  Course.findOneAndRemove({ _id: id }, function (err) {
+    if (err) {
       res.status(404)
       throw new Error('Course not found')
     }
     else {
-      res.json({"message": "The course has been deleted"})
+      res.json({ "message": "The course has been deleted" })
     }
   })
 })
