@@ -30,7 +30,8 @@ const userSchema = mongoose.Schema({
     },
     regd: {
         type: String,
-        required: true
+        required: true,
+        unique:true
     },
     year: {
         type: Number,
