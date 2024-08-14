@@ -1,5 +1,5 @@
-import express from 'express';
 import dotenv from 'dotenv';
+import express from 'express';
 import connectDB from './config/db.js';
 import teacherRoutes from './routes/teacherRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
@@ -12,7 +12,7 @@ const app = express()
 
 app.use(express.json()); //middleware
 
-app.get('/', (req,res) => {
+app.get('/', (req, res) => {
 	res.send("Let's goo!!");
 });
 
