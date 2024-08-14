@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import cors from "cors";
 import connectDB from './config/db.js';
 import authRouter from './routes/authRouter.js';
 import courseRoutes from './routes/courseRoutes.js';
@@ -10,6 +11,7 @@ connectDB()
 
 const app = express()
 
+app.use(cors());
 app.use(express.json()); //middleware
 
 app.get('/', (req, res) => {
