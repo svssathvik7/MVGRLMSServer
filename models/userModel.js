@@ -10,8 +10,7 @@ const userSchema = mongoose.Schema({
         required: true
     },
     branch: {
-        type: String,
-        enum: ['CSE', 'ECE', 'EEE', 'CIV', 'MEC', 'CHEM'], //RESTRICTED TO ONLY THESE BRANCHES - IF NOT FEASIBLE HERE WE CAN RESTRICT IN CLIENT SIDE AS WELL.   
+        type: String,   
         requierd: true
     },
 
