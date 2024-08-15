@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import bcrypt from 'bcryptjs'
 import generateToken from '../utils/generateToken.js'
 import User from '../models/userModel.js';
+import ConfigModel from '../models/configModel.js';
 
 
 
@@ -102,26 +103,48 @@ const singleRegistration = asyncHandler(async(req,res)=>{
 //@access Public
 
 const registerUser = asyncHandler(async (req, res) => {
-    const {bulk,faculty_email} = req.body;
-    try{
-        const facultyMatch = await User.findOne({email : faculty_email})
-        if(facultyMatch){
-            if(bulk==="true"){
-                return bulkRegisterUsers(req,res);
+    const {bulk, faculty_email} = req.body;
+    var config = await ConfigModel.findOne({});
+    
+    if (!config.code_expiry) {
+        const {pass_key} = req.body;
+        const actualPassKey = config.unique_code;
+        
+        if (pass_key === actualPassKey) {
+            await singleRegistration(req, res);
+            
+            // Set code_expiry to true if registration was successful
+            if (res.statusCode === 201) {
+                config.code_expiry = true;
+                await config.save();
             }
-            if(bulk==="false"){
-                return singleRegistration(req,res);
-            }
+            
+            return; // End the request-response cycle
+        } else {
+            console.log("Wrong pass key!");
+            return res.status(400).json({message: "Wrong pass key!"});
         }
-        else{
+    }
+    
+    try {
+        const facultyMatch = await User.findOne({email: faculty_email});
+        
+        if (facultyMatch) {
+            if (bulk === "true") {
+                return bulkRegisterUsers(req, res);
+            }
+            if (bulk === "false") {
+                return singleRegistration(req, res);
+            }
+        } else {
             throw new Error("Invalid Faculty Email");
         }
-    }
-    catch(error){
+    } catch (error) {
         console.log("Invalid Registering Faculty!");
-        return res.status(401).json({message:"Unauthorized access!"});
+        return res.status(401).json({message: "Unauthorized access!"});
     }
 });
+
 
 //@desc Bulk registration of students or teachers.
 //@route POST in register call (bulk is set to true i.e internal api redirect)
@@ -131,6 +154,6 @@ const bulkRegisterUsers = asyncHandler(async (req, res) => {
     //format field decides on what way the data has to be parsed for now the allowed format types are 
     const {format} = req.body;
     
-})
+});
 
 export { authUser, registerUser };

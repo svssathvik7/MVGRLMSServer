@@ -4,7 +4,6 @@ import cors from "cors";
 import connectDB from './config/db.js';
 import authRouter from './routes/authRouter.js';
 import courseRoutes from './routes/courseRoutes.js';
-
 dotenv.config()
 
 connectDB()
