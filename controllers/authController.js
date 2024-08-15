@@ -39,21 +39,10 @@ const authUser = asyncHandler(async (req, res) => {
 })
 
 //@desc Register a new user - teacher / student.
-//@route POST  /mvgr-lms/api/auth/register
-//@access Public
+//@route POST in register call (bulk is set to false i.e internal api redirect)
+//@access Private
 
-const registerUser = asyncHandler(async (req, res) => {
-    const {bulk,faculty_email} = req.body;
-    try{
-        const facultyMatch = await User.findOne({email : faculty_email})
-        if(bulk && facultyMatch){
-            return bulkRegisterUsers(req,res);
-        }
-    }
-    catch(error){
-        console.log("Invalid Registering Faculty!");
-        return res.status(401).json({message:"Unauthorized access!"});
-    }
+const singleRegistration = asyncHandler(async(req,res)=>{
     try {
         const {
             fname,
@@ -106,14 +95,41 @@ const registerUser = asyncHandler(async (req, res) => {
         console.log(error.message);
         return res.status(500).json({ message: error.message });
     }
+})
+
+//@desc Redirect a new user - teacher / student data based on the data density.
+//@route POST  /mvgr-lms/api/auth/register
+//@access Public
+
+const registerUser = asyncHandler(async (req, res) => {
+    const {bulk,faculty_email} = req.body;
+    try{
+        const facultyMatch = await User.findOne({email : faculty_email})
+        if(facultyMatch){
+            if(bulk==="true"){
+                return bulkRegisterUsers(req,res);
+            }
+            if(bulk==="false"){
+                return singleRegistration(req,res);
+            }
+        }
+        else{
+            throw new Error("Invalid Faculty Email");
+        }
+    }
+    catch(error){
+        console.log("Invalid Registering Faculty!");
+        return res.status(401).json({message:"Unauthorized access!"});
+    }
 });
 
 //@desc Bulk registration of students or teachers.
-//@route POST /mvgr-lms/auth/register-bulk.
+//@route POST in register call (bulk is set to true i.e internal api redirect)
 //@access Private
 
 const bulkRegisterUsers = asyncHandler(async (req, res) => {
-    //yet to decide which format the data will be passed to the server.
+    //format field decides on what way the data has to be parsed for now the allowed format types are 
+    const {format} = req.body;
     
 })
 
