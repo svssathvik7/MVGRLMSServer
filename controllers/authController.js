@@ -3,7 +3,9 @@ import bcrypt from 'bcryptjs'
 import generateToken from '../utils/generateToken.js'
 import User from '../models/userModel.js';
 import ConfigModel from '../models/configModel.js';
-
+import csv from 'csv-parser';
+import XLSX from 'xlsx';
+import { Readable } from 'stream';
 
 
 //@desc Auth user & get token
@@ -154,10 +156,44 @@ const registerUser = asyncHandler(async (req, res) => {
 //@access Private
 
 const bulkRegisterUsers = asyncHandler(async (req, res) => {
-    //format field decides on what way the data has to be parsed for now the allowed format types are csv,excel,json
-    const {format} = req.body;
-    if(format == "csv"){
+    const { format, data } = req.body;
 
+    try {
+        let parsedData = [];
+
+        if (format === 'csv') {
+            const readableStream = Readable.from(data);
+            readableStream
+                .pipe(csv())
+                .on('data', (row) => parsedData.push(row))
+                .on('end', async () => {
+                    await processBulkData(parsedData);
+                    res.status(201).json({ message: 'Bulk registration successful' });
+                });
+        } else if (format === 'json') {
+            parsedData = JSON.parse(data);
+            await processBulkData(parsedData);
+            res.status(201).json({ message: 'Bulk registration successful' });
+        } else if (format === 'excel') {
+            const workbook = XLSX.read(data, { type: 'buffer' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            parsedData = XLSX.utils.sheet_to_json(sheet);
+            await processBulkData(parsedData);
+            res.status(201).json({ message: 'Bulk registration successful' });
+        } else {
+            res.status(400).json({ message: 'Unsupported format' });
+        }
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).json({ message: error.message });
+    }
+
+    async function processBulkData(users) {
+        for (const userData of users) {
+            req.body = userData; // Replacing req.body with the parsed User data
+            await singleRegistration(req, res); // Call singleRegistration for each user
+        }
     }
 });
 
