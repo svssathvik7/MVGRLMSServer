@@ -7,7 +7,7 @@ import User from '../models/userModel.js';
 
 //@desc Auth user & get token
 //@route POST  /mvgr-lms/api/auth/login
-//@access Public
+//@access Protected
 const authUser = asyncHandler(async (req, res) => {
     try {
         const { regd, password } = req.body;
@@ -17,14 +17,14 @@ const authUser = asyncHandler(async (req, res) => {
             const hashPassword = user.password;
             const verified = bcrypt.compareSync(password, hashPassword);
             if (verified) {
-                res.status(201).json({
+                return res.status(201).json({
                     user: user,
                     token: generateToken(user._id)
                 });
             }
             else {
-                res.status(400).json({ message: "Incorrect password" });
-                throw new Error('Incorrect password');
+                console.log('Incorrect password');
+                return res.status(400).json({ message: "Incorrect password" });
             }
         }
         else {
@@ -33,8 +33,8 @@ const authUser = asyncHandler(async (req, res) => {
         }
     }
     catch (error) {
-        res.status(500).json({ message: error.message });
-        throw new Error(error.message);
+        console.log(error.message);
+        return res.status(500).json({ message: error.message });
     }
 })
 
@@ -43,6 +43,17 @@ const authUser = asyncHandler(async (req, res) => {
 //@access Public
 
 const registerUser = asyncHandler(async (req, res) => {
+    const {bulk,faculty_email} = req.body;
+    try{
+        const facultyMatch = await User.findOne({email : faculty_email})
+        if(bulk && facultyMatch){
+            return bulkRegisterUsers(req,res);
+        }
+    }
+    catch(error){
+        console.log("Invalid Registering Faculty!");
+        return res.status(401).json({message:"Unauthorized access!"});
+    }
     try {
         const {
             fname,
@@ -60,8 +71,8 @@ const registerUser = asyncHandler(async (req, res) => {
         const userExits = await User.findOne({ regd });
 
         if (userExits) {
-            res.status(400).json({ message: "User already exists" });
-            throw new Error('User already exists');
+            console.log('User already exists');
+            return res.status(400).json({ message: "User already exists" });
         }
 
         const salt = bcrypt.genSaltSync(10);
@@ -81,19 +92,19 @@ const registerUser = asyncHandler(async (req, res) => {
         });
 
         if (user) {
-            res.status(201).json({
+            return res.status(201).json({
                 user: user,
                 token: generateToken(user.regd)
             })
         }
         else {
-            res.status(400).json({ message: "Invalid user data" });
-            throw new Error('Invalid user data')
+            console.log('Invalid user data')
+            return res.status(400).json({ message: "Invalid user data" });
         }
     }
     catch (error) {
-        res.status(500).json({ message: error.message });
-        throw new Error(error.message);
+        console.log(error.message);
+        return res.status(500).json({ message: error.message });
     }
 });
 
@@ -103,6 +114,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const bulkRegisterUsers = asyncHandler(async (req, res) => {
     //yet to decide which format the data will be passed to the server.
+    
 })
 
 export { authUser, registerUser };
