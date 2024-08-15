@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import ConfigModel from "../models/configModel.js";
+import bcrypt from "bcryptjs";
 const connectDB = async () => {
 	try {
 		const conn = await mongoose.connect(process.env.MONGO_URI);
