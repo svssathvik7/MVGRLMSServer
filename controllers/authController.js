@@ -105,8 +105,11 @@ const singleRegistration = asyncHandler(async(req,res)=>{
 const registerUser = asyncHandler(async (req, res) => {
     const {bulk, faculty_email} = req.body;
     var config = await ConfigModel.findOne({});
-    
+    const {isadmin} = req.body;
     if (!config.code_expiry) {
+        if(!isadmin){
+            return res.status(400).json({message:"Only you can register a faculty/admin firsly!"});
+        }
         const {pass_key} = req.body;
         const actualPassKey = config.unique_code;
         
@@ -151,9 +154,11 @@ const registerUser = asyncHandler(async (req, res) => {
 //@access Private
 
 const bulkRegisterUsers = asyncHandler(async (req, res) => {
-    //format field decides on what way the data has to be parsed for now the allowed format types are 
+    //format field decides on what way the data has to be parsed for now the allowed format types are csv,excel,json
     const {format} = req.body;
-    
+    if(format == "csv"){
+
+    }
 });
 
 export { authUser, registerUser };
