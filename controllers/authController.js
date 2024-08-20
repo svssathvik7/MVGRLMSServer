@@ -71,7 +71,7 @@ const validateToken = asyncHandler(async (req, res) => {
 //@route POST in register call (bulk is set to false i.e internal api redirect)
 //@access Private
 
-const singleRegistration = asyncHandler(async (req, res) => {
+const singleRegistration = asyncHandler(async (req, res, isBulk) => {
     try {
         const {
             fname,
@@ -90,8 +90,10 @@ const singleRegistration = asyncHandler(async (req, res) => {
 
         if (userExits) {
             console.log('User already exists');
-            res.status(400).json({ message: "User already exists" });
-            return;
+            if(!isBulk)
+                return res.status(400).json({ message: "User already exists" });
+            else
+                return
         }
 
         const salt = bcrypt.genSaltSync(10);
@@ -111,22 +113,30 @@ const singleRegistration = asyncHandler(async (req, res) => {
         });
 
         if (user) {
-            res.status(201).json({
-                user: user,
-                token: generateToken(user.regd)
-            })
-            return;
+            if(!isBulk){
+                return res.status(201).json({
+                    user: user,
+                    token: generateToken(user.regd)
+                })
+            }
+            else{
+                return;
+            }
         }
         else {
             console.log('Invalid user data')
-            res.status(400).json({ message: "Invalid user data" });
-            return;
+            if(!isBulk)
+                return res.status(400).json({ message: "Invalid user data" });
+            else
+                return;
         }
     }
     catch (error) {
         console.log(error.message);
-        res.status(500).json({ message: error.message });
-        return;
+        if(!isBulk)
+            return res.status(500).json({ message: error.message });
+        else    
+            return;
     }
 })
 
@@ -158,24 +168,19 @@ const registerUser = asyncHandler(async (req, res) => {
             return; // End the request-response cycle
         } else {
             console.log("Wrong pass key!");
-            res.status(400).json({ message: "Wrong pass key!" });
-            return;
+            return res.status(400).json({ message: "Wrong pass key!" });
         }
     }
 
     try {
         const facultyMatch = await User.findOne({ email: faculty_email });
-
-
-
         if (facultyMatch) {
             if (bulk === true) {
                 bulkRegisterUsers(req, res);
                 return;
             }
             if (bulk === false) {
-                console.log('coming');
-
+                console.log('Bulk has been set to false');
                 singleRegistration(req, res);
                 return;
             }
@@ -207,7 +212,7 @@ const bulkRegisterUsers = asyncHandler(async (req, res) => {
                 .on('data', (row) => parsedData.push(row))
                 .on('end', async () => {
                     await processBulkData(parsedData);
-                    res.status(201).json({ message: 'Bulk registration successful' });
+                    return res.status(201).json({ message: 'Bulk registration successful' });
                 });
         } else if (format === 'json') {
             if (typeof data === 'string') {
@@ -217,33 +222,32 @@ const bulkRegisterUsers = asyncHandler(async (req, res) => {
                 parsedData = data;
             }
             await processBulkData(parsedData);
-            res.status(201).json({ message: 'Bulk registration successful' });
+            return res.status(201).json({ message: 'Bulk registration successful' });
         } else if (format === 'excel') {
             const workbook = XLSX.read(data, { type: 'buffer' });
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
             parsedData = XLSX.utils.sheet_to_json(sheet);
             await processBulkData(parsedData);
-            res.status(201).json({ message: 'Bulk registration successful' });
+            return res.status(201).json({ message: 'Bulk registration successful' });
         } else {
-            res.status(400).json({ message: 'Unsupported format' });
+            return res.status(400).json({ message: 'Unsupported format' });
         }
     } catch (error) {
         console.log(error.message);
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 
     async function processBulkData(users) {
         try {
-
             for (const userData of users) {
                 req.body = userData; // Replacing req.body with the parsed User data
-                await singleRegistration(req, res); // Call singleRegistration for each user
+                await singleRegistration(req, res,true); // Call singleRegistration for each user
             }
         }
         catch (error) {
-            console.log(error.message);
-            res.status(500).json({ message: error.message });
+            console.log("While bulk: "+error.message);
+            return res.status(500).json({ message: error.message });
         }
     }
 });
