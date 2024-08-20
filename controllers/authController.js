@@ -8,6 +8,19 @@ import csv from 'csv-parser';
 import XLSX from 'xlsx';
 import { Readable } from 'stream';
 
+//@desc A minimalistic utility to check pass-key validity
+//@route POST  /mvgr-lms/api/auth/code-validity
+//@access Public
+const codeStatusUtil = asyncHandler(async(req,res)=>{
+    try {
+        const configDoc = await ConfigModel.findOne();
+        const keyStatus = await configDoc.code_expiry;
+        return res.status(200).json({message:"Successful retreival!",isvalid:!keyStatus});
+    } catch (error) {
+        console.log("Code status util : "+error.message);
+        return res.status(500).json({message:error.message,status:fail});
+    }
+});
 
 //@desc Auth user & get token
 //@route POST  /mvgr-lms/api/auth/login
@@ -245,11 +258,11 @@ const bulkRegisterUsers = asyncHandler(async (req, res) => {
                 await singleRegistration(req, res,true); // Call singleRegistration for each user
             }
         }
-        catch (error) {
+        catch (error){
             console.log("While bulk: "+error.message);
             return res.status(500).json({ message: error.message });
         }
     }
 });
 
-export { authUser, registerUser, validateToken };
+export { authUser, registerUser, validateToken, codeStatusUtil };
