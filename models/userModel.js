@@ -37,11 +37,11 @@ const userSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    isCr: {
+    iscr: {
       type: Boolean,
       default: false,
     },
-    isAdmin: {
+    isadmin: {
       type: Boolean,
       default: false,
     },

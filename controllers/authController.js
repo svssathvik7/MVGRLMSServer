@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken'
 import asyncHandler from 'express-async-handler';
 import bcrypt from 'bcryptjs'
 import generateToken from '../utils/generateToken.js'
@@ -41,11 +42,36 @@ const authUser = asyncHandler(async (req, res) => {
     }
 })
 
+//@desc Validate the jwt token 
+//@route POST  /mvgr-lms/api/auth/validate_token
+//@access Protected
+
+const validateToken = asyncHandler(async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (token == null) return res.sendStatus(401);
+
+        jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+            if (err) return res.status(403).json({ message: "Session Expired. Please log in again." });
+            req.user = user;
+            return res.status(200).json({ message: "Valid Login Session" });
+        });
+    }
+    catch (error) {
+        console.log(error.message);
+        return res.status(500).json({ message: error.message });
+
+    }
+});
+
+
 //@desc Register a new user - teacher / student.
 //@route POST in register call (bulk is set to false i.e internal api redirect)
 //@access Private
 
-const singleRegistration = asyncHandler(async(req,res)=>{
+const singleRegistration = asyncHandler(async (req, res) => {
     try {
         const {
             fname,
@@ -64,7 +90,8 @@ const singleRegistration = asyncHandler(async(req,res)=>{
 
         if (userExits) {
             console.log('User already exists');
-            return res.status(400).json({ message: "User already exists" });
+            res.status(400).json({ message: "User already exists" });
+            return;
         }
 
         const salt = bcrypt.genSaltSync(10);
@@ -84,19 +111,22 @@ const singleRegistration = asyncHandler(async(req,res)=>{
         });
 
         if (user) {
-            return res.status(201).json({
+            res.status(201).json({
                 user: user,
                 token: generateToken(user.regd)
             })
+            return;
         }
         else {
             console.log('Invalid user data')
-            return res.status(400).json({ message: "Invalid user data" });
+            res.status(400).json({ message: "Invalid user data" });
+            return;
         }
     }
     catch (error) {
         console.log(error.message);
-        return res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error.message });
+        return;
     }
 })
 
@@ -105,48 +135,57 @@ const singleRegistration = asyncHandler(async(req,res)=>{
 //@access Public
 
 const registerUser = asyncHandler(async (req, res) => {
-    const {bulk, faculty_email} = req.body;
+    const { bulk, faculty_email } = req.body;
     var config = await ConfigModel.findOne({});
-    const {isadmin} = req.body;
+    const { isadmin } = req.body;
     if (!config.code_expiry) {
-        if(!isadmin){
-            return res.status(400).json({message:"Only you can register a faculty/admin firsly!"});
+        if (!isadmin) {
+            res.status(400).json({ message: "Only you can register a faculty/admin firsly!" });
+            return;
         }
-        const {pass_key} = req.body;
+        const { pass_key } = req.body;
         const actualPassKey = config.unique_code;
-        
+
         if (pass_key === actualPassKey) {
             await singleRegistration(req, res);
-            
+
             // Set code_expiry to true if registration was successful
             if (res.statusCode === 201) {
                 config.code_expiry = true;
                 await config.save();
             }
-            
+
             return; // End the request-response cycle
         } else {
             console.log("Wrong pass key!");
-            return res.status(400).json({message: "Wrong pass key!"});
+            res.status(400).json({ message: "Wrong pass key!" });
+            return;
         }
     }
-    
+
     try {
-        const facultyMatch = await User.findOne({email: faculty_email});
-        
+        const facultyMatch = await User.findOne({ email: faculty_email });
+
+
+
         if (facultyMatch) {
-            if (bulk === "true") {
-                return bulkRegisterUsers(req, res);
+            if (bulk === true) {
+                bulkRegisterUsers(req, res);
+                return;
             }
-            if (bulk === "false") {
-                return singleRegistration(req, res);
+            if (bulk === false) {
+                console.log('coming');
+
+                singleRegistration(req, res);
+                return;
             }
         } else {
             throw new Error("Invalid Faculty Email");
         }
     } catch (error) {
         console.log("Invalid Registering Faculty!");
-        return res.status(401).json({message: "Unauthorized access!"});
+        res.status(401).json({ message: "Unauthorized access!" });
+        return;
     }
 });
 
@@ -171,7 +210,12 @@ const bulkRegisterUsers = asyncHandler(async (req, res) => {
                     res.status(201).json({ message: 'Bulk registration successful' });
                 });
         } else if (format === 'json') {
-            parsedData = JSON.parse(data);
+            if (typeof data === 'string') {
+                parsedData = JSON.parse(data);
+            }
+            else {
+                parsedData = data;
+            }
             await processBulkData(parsedData);
             res.status(201).json({ message: 'Bulk registration successful' });
         } else if (format === 'excel') {
@@ -190,11 +234,18 @@ const bulkRegisterUsers = asyncHandler(async (req, res) => {
     }
 
     async function processBulkData(users) {
-        for (const userData of users) {
-            req.body = userData; // Replacing req.body with the parsed User data
-            await singleRegistration(req, res); // Call singleRegistration for each user
+        try {
+
+            for (const userData of users) {
+                req.body = userData; // Replacing req.body with the parsed User data
+                await singleRegistration(req, res); // Call singleRegistration for each user
+            }
+        }
+        catch (error) {
+            console.log(error.message);
+            res.status(500).json({ message: error.message });
         }
     }
 });
 
-export { authUser, registerUser };
+export { authUser, registerUser, validateToken };
